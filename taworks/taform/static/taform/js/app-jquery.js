@@ -1,4 +1,24 @@
 $(document).ready(function() {
+  $('#btn').on('click', function(e) {
+      $("#dialog-confirm").dialog('open');
+  });
+
+  $("#dialog-confirm").dialog({
+      resizable: false,
+      height: 190,
+      autoOpen: false,
+      width: 330,
+      modal: true,
+      buttons: {
+          "Submit": function() {
+              $('#myform').submit();
+          },
+          Cancel: function() {
+              $(this).dialog("close");
+          }
+      }
+  });
+
   $( ".number" ).on( "click", function() {
     if($( ".number:checked" ).length > 3)
     {
@@ -73,3 +93,4 @@ $(document).ready(function() {
     });
   }
 });
+
