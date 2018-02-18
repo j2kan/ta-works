@@ -49,7 +49,7 @@
 
 {% load taform_extras %}
 
-<form enctype="multipart/form-data" autocomplete="off" action="{% url 'application' %}" method="POST" accept-charset="utf-8" >
+<form id="myform" name="myform" enctype="multipart/form-data" autocomplete="off" action="{% url 'application' %}" method="POST" accept-charset="utf-8" >
 
 {% csrf_token %}
 <font class="font">{{error}}</font>
@@ -211,7 +211,13 @@ Sciences Teaching Assistantship please read in full
 <p><b>To submit your application you must agree to the above terms.</b></p>
 
 <p id="p01">Please note you will not be able to make changes to your application once you submit.<p>
-<input type="submit" id ="btn" value="Submit" disabled>
+<input type="hidden" name="btn" value="Submit" />
+<input type="button" id ="btn" value="Submit" disabled>
+
+<div id="dialog-confirm" title="Final Confirmation">
+    <p>Are you sure you would like to proceed with submitting your application? You cannot go back.</p>
+</div>
+
 </form>
 
 {% endif %}
