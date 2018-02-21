@@ -14,7 +14,7 @@ $(document).ready(function() {
               $('#myform').submit();
           },
           Cancel: function() {
-              $(this).dialog("close");
+              $(this).hide();
           }
       }
   });
