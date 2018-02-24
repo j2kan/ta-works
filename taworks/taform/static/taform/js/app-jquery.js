@@ -1,4 +1,26 @@
 $(document).ready(function() {
+  $('#btn').on('click', function(e) {
+      $("#dialog-confirm").dialog('open');
+  });
+
+  $("#dialog-confirm").dialog({
+      resizable: false,
+      height: 190,
+      autoOpen: false,
+      width: 330,
+      modal: true,
+      buttons: {
+          "Submit": function() {
+              $('#myform').submit(function () {
+                 return false;
+              });
+          },
+          Cancel: function() {
+              $(this).hide();
+          }
+      }
+  });
+
   $( ".number" ).on( "click", function() {
     if($( ".number:checked" ).length > 3)
     {
@@ -41,7 +63,7 @@ $(document).ready(function() {
     e.preventDefault();
     var currentContext = $(this).parent();
     // makes a temporary dialog for taking user input
-    $('<div><p>(1500 character limit)</p><textarea maxlength=1500 id=tempBox ></textarea></div>').dialog({
+    $('<div><p>Please indicate why you are fit for teaching this course. Include any relevant past experience in your answer. <br> (1500 character limit)</p><textarea maxlength=1500 id=tempBox ></textarea></div>').dialog({
       modal: true,
       height: 615,
       width: 750,
@@ -73,3 +95,4 @@ $(document).ready(function() {
     });
   }
 });
+
