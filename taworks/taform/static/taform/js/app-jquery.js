@@ -11,7 +11,9 @@ $(document).ready(function() {
       modal: true,
       buttons: {
           "Submit": function() {
-              $('#myform').submit();
+              $('#myform').submit(function () {
+                 return false;
+              });
           },
           Cancel: function() {
               $(this).hide();
