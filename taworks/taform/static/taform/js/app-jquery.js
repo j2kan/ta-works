@@ -74,7 +74,7 @@ $(document).ready(function() {
   }
 
   $('input[name="confirm"]').on('click', function(e){
-      e.preventDefault();
+      //e.preventDefault();
       $('#dialog').dialog('open');
   });
 
@@ -84,9 +84,10 @@ $(document).ready(function() {
       closeOnEscape: false,
       buttons: {
           "Confirm": function(e) {
+              e.preventDefault();
               $(this).dialog('close');
-              $('#myform').submit();
-          },
+              $('#myform').submit()
+            },
           "Cancel": function() {
               $(this).dialog('close');
           }
