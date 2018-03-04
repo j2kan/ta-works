@@ -35,6 +35,7 @@
             </form></td>
         </tr>
     </table>
+    <p>A "closed" status indicates the student's cannot access the form, where as an "open" status indicates they can access the form and apply.</p>
 {% endif %}
 
 {% if app_status ==  'Closed' and AC == False %}
@@ -172,7 +173,7 @@ To help instructors select TAs, please upload a CV or resume (PDF only):<br><br>
     </div>
 {% for i in courses %}
 <div class="required">
-    <div id="row">
+    <div class="row">
         <div id="left">
             <div id="divWordWrap2">
                 <a target="_blank" href="http://www.adm.uwaterloo.ca/cgi-bin/cgiwrap/infocour/salook.pl?sess={{i.term}}&subject={{i.course_subject}}&cournum={{i.course_id}}">{{i.course_subject}} {{i.course_id}} Sec {{i.section}} - {{i.course_name}} - {{i.instructor_name}}</a></div></div>
@@ -215,7 +216,11 @@ Sciences Teaching Assistantship please read in full
 <p><b>To submit your application you must agree to the above terms.</b></p>
 
 <p id="font">Please note you will not be able to make changes to your application once you submit.<p>
-<input name="confirm" type="submit" class="submitButton" id ="btn" value="Submit" disabled>
+<div class="Submit_Apps">
+
+    <input name="confirm" type="submit" class="submitButton" id ="btn" value="Submit" disabled>
+    <input type="hidden" name="form_valid" value='{{form_valid}}' />
+</div>
 
 </form>
 

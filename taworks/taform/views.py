@@ -155,6 +155,7 @@ def apply(request):
         s_form = models.StudentForm(request.POST, request.FILES or None)
         a_forms = [models.ApplicationForm(request.POST, prefix=str(x), 
             instance=models.Application()) for x in range(len(num))]
+        form_valid = s_form.is_valid()
         context = {
                 's_form' : s_form,
                 'courses' : models.Course.objects.all(),
@@ -162,7 +163,8 @@ def apply(request):
                 'error' : "Error: The student ID must be 8 characters.",
                 'AC' : AC,
                 'app_status' : app_status,
-                'status_date': status_date
+                'status_date': status_date,
+                'form_valid' : form_valid
                 }
         try:
             studentID=str(request.POST['student_id'])
