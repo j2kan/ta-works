@@ -73,7 +73,7 @@ $(document).ready(function() {
     });
   }
 
-  $('input[name="confirm"]').on('click', function(e){
+  $('input[name="confirm"]').on('submit', function(e){
       //e.preventDefault();
       $('#dialog').dialog('open');
   });
