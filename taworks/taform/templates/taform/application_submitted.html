@@ -23,8 +23,10 @@
 	    {% for i in applied %}
 			<li>{{i.course_subject}} {{i.course_id}} Sec {{i.section}} - {{i.course_name}} - {{i.instructor_name}}</li>
 		{% endfor %}
+	{% else %}
+		<p>You did not select a preference for any course.</p>
 	{% endif %}
-	
+
 	<div class="red_txt">
     	<p>Please note: You are not able to return to your application, please close this tab.</p>
     </div>
