@@ -235,7 +235,14 @@ def apply(request):
                     }
                 return render(request, 'taform/application.html', context)
             context = None
-            return HttpResponseRedirect('application_submitted.html')
+            studentID=request.POST['student_id']
+            courses_applied= models.Course.objects.filter(application__student__student_id=studentID).distinct()
+            context = {
+                'AC' : AC,
+                'applied' : courses_applied,
+                'student_id' : studentID
+                }
+            return render(request, 'taform/application_submitted.html', context)
         except:
             pass
     num = [x for x in models.Course.objects.all()]
@@ -250,10 +257,6 @@ def apply(request):
         'status_date': status_date
         }
     return render(request, 'taform/application.html', context)
-
-def application_submitted(request):
-    AC = authenticated(request)
-    return render(request, 'taform/application_submitted.html', {'AC': AC})
 
 def course_list(request):
     error_msg = 'There is an error with the CSV file. Please refer to the template and try again.'
