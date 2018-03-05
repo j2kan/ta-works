@@ -25,6 +25,18 @@ import pandas as pd
 from django.db.models import Count, Case, When, IntegerField, Avg
 import pulp
 import math
+from django.views.generic.edit import UpdateView
+
+class StudentUpdate(UpdateView):
+    form_class = models.StudentEditForm
+    model = models.Student
+    success_url = '../applicants.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        return super(StudentUpdate, self).dispatch(
+            request, *args, **kwargs)
 
 # This is to provide annotation for methods that need a separate thread
 def postpone(function):
@@ -130,6 +142,40 @@ def home(request):
     else:
         return render(request, 'taform/home.html')
 
+def applicants(request):
+    if not request.user.is_authenticated:
+        return redirect('login')
+    AC = authenticated(request)
+    apps = True
+    students = models.Student.objects.all().order_by('first_name', 'last_name')
+    for i in students:
+        i.created_at += datetime.timedelta(hours=-5)
+    context = {'AC':AC,
+               'students' : students,
+               'apps':apps,
+               'error': 'Sorry, there are no applicants to display.'}
+    if 'export_applicants' in request.POST:
+        return export_applicants()
+    return render(request, 'taform/applicants.html', context)
+
+def export_applicants():
+    df_students = pd.DataFrame(list(models.Student.objects.all().values()))
+    df_students = df_students.sort_values(by=['first_name', 'last_name'])
+    df_students['email'] = '<' + df_students['quest_id'] + '@edu.uwaterloo.ca>'
+    df_students['ta_expectations'] = df_students['ta_expectations'].replace(False, 'No')
+    df_students['ta_expectations'] = df_students['ta_expectations'].replace(True, 'Yes')
+    df_students['is_disqualified'] = df_students['is_disqualified'].replace(False, 'No')
+    df_students['is_disqualified'] = df_students['is_disqualified'].replace(True, 'Yes')
+    df_students['created_at'] = df_students['created_at'] + datetime.timedelta(hours=-5)
+    df_students['created_at'] = df_students['created_at'].dt.strftime("%Y-%M-%d %H:%M %p")
+    df_students = df_students[['is_disqualified', 'student_id', 'first_name', 'last_name', 'email', 'citizenship', 
+    'student_visa_expiry_date', 'department', 'current_program','enrolled_status', 'ta_expectations',
+    'created_at']]
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename=applicant_info.csv'
+    df_students.to_csv(path_or_buf=response, header=True, index=False, quoting=csv.QUOTE_NONNUMERIC)
+    return response
+
 def logout(request):
     return render(django_logout(request), 'taform/logout.html')
 
@@ -229,7 +275,7 @@ def course_list(request):
             else:
                 return course_csv()
         if 'Upload' in request.POST and not request.FILES:
-            return render(request, 'taform/course_list.html', {'AC' : AC})   
+            return render(request, 'taform/course_list.html', {'AC' : AC, 'error': 'You must choose a CSV.'})   
         if 'Upload' in request.POST and request.FILES:
             models.TempCourse.objects.all().delete()
             f = request.FILES['csv_file']
@@ -238,7 +284,7 @@ def course_list(request):
             except:
                 return render(request, 'taform/course_list.html', 
                     {'error': error_msg, 
-                    'AC' : AC})   
+                    'AC' : AC})
             is_valid = validate_temp()  
             courses = models.TempCourse.objects.all()
             if is_valid:
@@ -260,35 +306,41 @@ def algorithm(request):
     if not request.user.is_authenticated:
         return redirect('login')
     AC = authenticated(request)
-    df = pd.DataFrame(list(models.Assignment.objects.all().values()))
+    df_apps = pd.DataFrame(list(models.Assignment.objects.all().values()))
+    df_elg_students = pd.DataFrame(list(models.Student.objects.all().filter(is_disqualified = False).values()))
     max_date = None
     matches =  pd.DataFrame()
     courses_supply = pd.DataFrame()
-    if not df.empty:
-        max_date = max(df['created_at'])
+    students_supply = pd.DataFrame()
+    context = None
+    if not df_apps.empty and not df_elg_students.empty:
+        max_date = max(df_apps['created_at'])
         max_date = max_date + datetime.timedelta(hours=-5)
         matches = format_algorithm_export()
-        courses_supply = calculate_unassignment(matches)
-        courses_supply = {'courses' : courses_supply}
-        courses_supply = pd.DataFrame.from_dict(courses_supply)
-        courses_supply = courses_supply.reset_index()
-        courses_supply.columns = ['course_unit', '# of positions available']
+        courses_supply = calculate_courses_without_assignment(matches)
+        if (len(courses_supply)) > 0:
+            courses_supply.columns = ['course_unit', 'position type']
+            courses_supply.sort_values(by=['course_unit', 'position type'], inplace=True)
+        if (len(students_supply)) > 0:
+            students_supply = calculate_students_without_assignment(matches)
+            students_supply.columns = ['students without a match']
     context = {'AC' : AC,
                'display_date': max_date,
                'matches': matches.to_html(index=False),
-               'courses_supply': courses_supply.to_html(index=False)}
+               'courses_supply': courses_supply.to_html(index=False),
+               'students_supply': students_supply.to_html(index=False)}
     if 'algo_run' in request.POST:
         models.Assignment.objects.all().delete()
         df_courses = pd.DataFrame(list(models.Course.objects.all().values()))
         df_apps = pd.DataFrame(list(models.Application.objects.all().values()))
-        if df_courses.empty or df_apps.empty:
+        df_elg_students = pd.DataFrame(list(models.Student.objects.all().filter(is_disqualified = False).values()))
+        if df_courses.empty or df_apps.empty or df_elg_students.empty:
                 context = {'AC' : AC,
                 'display_date': max_date,
                 'no_results_error': 'The algorithm could not be run. Please ensure:',
-                'no_results_error_1': '1. Students have applied to courses',
+                'no_results_error_1': '1. Eligible Students have applied to courses',
                 'no_results_error_2': '2. Instructors have ranked students for their courses.',
                 'no_results_error_3': '3. The number of teaching assistants per course has been assigned.'}
-                return render(request, 'taform/algorithm.html', context)
         else:
             result, costs, courses, students, courses_supply = algorithm_run()
             for c in courses:
@@ -304,48 +356,88 @@ def algorithm(request):
                 max_date = max(df['created_at'])
                 max_date = max_date + datetime.timedelta(hours=-5)
                 matches = format_algorithm_export()
-                courses_supply = calculate_unassignment(matches)
-                courses_supply = {'courses' : courses_supply}
-                courses_supply = pd.DataFrame.from_dict(courses_supply)
-                courses_supply = courses_supply.reset_index()
-                courses_supply.columns = ['course_unit', '# of positions available']
+                courses_supply = calculate_courses_without_assignment(matches)
+                if (len(courses_supply)) > 0:
+                    courses_supply.columns = ['course_unit', 'position type']
+                    courses_supply.sort_values(by=['course_unit', 'position type'], inplace=True)
+                if (len(students_supply)) > 0:
+                    students_supply = calculate_students_without_assignment(matches)
+                    students_supply.columns = ['students without a match']
                 context = {'AC' : AC,
                    'display_date': max_date,
                    'matches': matches.to_html(index=False),
-                   'courses_supply': courses_supply.to_html(index=False)}
-                return render(request, 'taform/algorithm.html', context)
+                   'courses_supply': courses_supply.to_html(index=False),
+                   'students_supply': students_supply.to_html(index=False)}
             else:
                 context = {'AC' : AC,
                     'display_date': max_date,
                     'no_results_error': 'The algorithm could not be run. Please ensure:',
-                    'no_results_error_1': '1. Students have applied to courses',
+                    'no_results_error_1': '1. Eligible Students have applied to courses',
                     'no_results_error_2': '2. Instructors have ranked students for their courses.',
                     'no_results_error_3': '3. The number of teaching assistants per course has been assigned.'}
-            return render(request, 'taform/algorithm.html', context)
-    if 'algo_export' in request.POST:
+    if request.method == 'POST':
         df_assignment = pd.DataFrame(list(models.Assignment.objects.all().values()))
         df_courses = pd.DataFrame(list(models.Course.objects.all().values()))
-        if df_assignment.empty or df_courses.empty:
+        df_elg_students = pd.DataFrame(list(models.Student.objects.all().filter(is_disqualified = False).values()))        
+        if df_assignment.empty or df_courses.empty or df_elg_students.empty:
             context = {'AC' : AC,
                 'display_date': max_date,
                 'no_results_error': 'There are no results to export. Please ensure:',
-                'no_results_error_1': '1. Students have applied to courses',
+                'no_results_error_1': '1. Eligible Students have applied to courses',
                 'no_results_error_2': '2. Instructors have ranked students for their courses.',
                 'no_results_error_3': '3. The number of teaching assistants per course has been assigned.'}
-            return render(request, 'taform/algorithm.html', context)
-        else:
+        elif 'algo_export' in request.POST:
             return algorithm_export()
+        elif 'student_export' in request.POST:
+            return export_dataframe(students_supply, 'students_without_match')
+        elif 'course_export' in request.POST:
+            return export_dataframe(courses_supply, 'courses_without_match')
     return render(request, 'taform/algorithm.html', context)
 
-def calculate_unassignment(matches):
+def calculate_courses_without_assignment(matches):
     df_course_info = format_course_info()
     courses_supply = dict()
     for index, row in df_course_info.iterrows():
         num_pos = row[4] + row[5] + row[6] + row[7]
-        courses_supply[row[1]] = num_pos
-    for i in range(len(matches['course_unit'])):
-        courses_supply[matches['course_unit'][i]] -= 1
-    return courses_supply
+        courses_supply[row[1]] = [row[4], row[5], row[6], row[7]]
+    for index, row in matches.iterrows():
+        if (row['position type'] == 1.00):
+            courses_supply[row['course_unit']][0] -= 1
+        elif (row['position type'] == 0.75):
+            courses_supply[row['course_unit']][1] -= 1
+        elif (row['position type'] == 0.50):
+            courses_supply[row['course_unit']][2] -=1
+        elif (row['position type'] == 0.25):
+            courses_supply[row['course_unit']][3] -=1
+        else:
+            #something bad happened
+            continue
+    available_courses = []
+    for i in courses_supply:
+        if (sum(courses_supply[i])>0):
+            pos_type = 1.00
+            for j in courses_supply[i]:
+                num = j
+                while (num > 0):
+                    available_courses.append([i, '%.2f'%pos_type])
+                    num -= 1
+                pos_type -= 0.25
+    available_courses = pd.DataFrame(available_courses)
+    return available_courses
+
+def calculate_students_without_assignment(matches):
+    students = []
+    df_ranking_info = format_rankings_info()
+    for index, row in df_ranking_info.iterrows():
+        if (row[3] not in students):
+            students.append(row[3])
+    students_match = matches['student_unit']
+    for i in students_match:
+        # gaurd against multiple go pressed
+        if i in students:
+            students.remove(i)
+    students = pd.DataFrame(students)
+    return students
 
 def algorithm_run():
     # Format course data
@@ -404,20 +496,27 @@ def algorithm_export():
     df = format_algorithm_export()
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename=TA_Assignment.csv'
-    df.to_csv(path_or_buf=response, header=True, index=False, quoting=csv.QUOTE_NONNUMERIC)
+    df.to_csv(path_or_buf=response, header=True, index=False, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8')
+    return response
+
+def export_dataframe(df, name):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename=' + name +'.csv'
+    df.to_csv(path_or_buf=response, header=True, index=False, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8')
     return response
 
 def format_algorithm_export():
     df = pd.DataFrame(list(models.Assignment.objects.all().values()))
     df_courses = pd.DataFrame(list(models.Course.objects.all().values()))
-    df_courses['course_unit'] = df_courses['course_subject'] + " " + df_courses['course_id'] + " " + df_courses['section'] + " " + df_courses['course_name']
-    df_students = pd.DataFrame(list(models.Student.objects.all().values()))
+    df_students = pd.DataFrame(list(models.Student.objects.all().filter(is_disqualified = False).values()))
+    df_courses['course_unit'] = df_courses['course_subject'] + " " + df_courses['course_id'] + " " + df_courses['section'] + " " + df_courses['course_name'] + " " + df_courses['instructor_name'] 
     df_students['student_unit'] = df_students['first_name'] + " " + df_students['last_name'] + " <" + df_students['quest_id'] + "@edu.uwaterloo.ca>"
     df['s_id'] = df['student_id'].astype(int)
     df_students['s_id'] = df_students['id'].astype(int)
     df['c_id'] = df['course_id'].astype(int)
     df_courses['c_id'] = df_courses['id'].astype(int)
     df_students = df_students[['s_id', 'student_unit', 'full_ta', 'half_ta']]
+    df_course_positions = df_courses[['course_unit', 'full_ta', 'three_quarter_ta', 'half_ta', 'quarter_ta']]
     df_courses = df_courses[['c_id', 'course_unit']]
     df = df.merge(df_students, on='s_id', how='left')
     df = df.merge(df_courses, on='c_id', how='left')
@@ -436,10 +535,39 @@ def format_algorithm_export():
         else:
             df.loc[i,'prefer half ta'] = ''
     df.drop(['full_ta', 'half_ta'], axis = 1, inplace = True)
+    df['position type'] = -1
+    df_course_positions_dict = dict()
+    for index, row in df_course_positions.iterrows():
+        df_course_positions_dict[row[0]] = [row[1], row[2], row[3], row[4]]
+    df = df.sort_values(by=['prefer full ta', 'course_unit', 'score'], ascending=[True, True, True])
+    for i in range(len(df['position type'])):
+        # full ta
+        if (df_course_positions_dict[df['course_unit'][i]][0]) > 0:
+             df.loc[i,'position type'] = 1.00
+             df_course_positions_dict[df['course_unit'][i]][0] -= 1
+        # three quarter ta
+        elif (df_course_positions_dict[df['course_unit'][i]][1]) > 0:
+             df.loc[i,'position type'] = 0.75
+             df_course_positions_dict[df['course_unit'][i]][1] -= 1
+        # half ta
+        elif (df_course_positions_dict[df['course_unit'][i]][2]) > 0:
+             df.loc[i,'position type'] = 0.50
+             df_course_positions_dict[df['course_unit'][i]][2] -= 1
+        # quarter ta
+        elif (df_course_positions_dict[df['course_unit'][i]][3]) > 0:
+             df.loc[i,'position type'] = 0.25
+             df_course_positions_dict[df['course_unit'][i]][3] -= 1
+        else:
+           # something is broken, default of -1 will persist
+           # add to documentation 
+           continue
+    df = df.sort_values(by=['course_unit', 'score', 'position type','student_unit'], ascending=[True, True, False, True])
+    df = df[['course_unit', 'student_unit', 'position type', 'score', 'prefer full ta', 'prefer half ta']]
     return df
 
 def copy_courses(newtable, oldtable):
     models.Course.objects.all().delete()
+    models.Student.objects.all().delete()
     queryset = models.TempCourse.objects.all().values('term', 'course_subject', 
         'course_id', 'section', 'course_name', 'instructor_name', 
         'instructor_email','url_hash')
@@ -547,8 +675,8 @@ def instructor_ranking(request, hash):
         is_ranking_submitted = True
         s_form = models.StudentApps(request.POST)
         a_form = models.Applications(request.POST)
-        apps = models.Application.objects.all().filter(course_id = courseID
-            ).exclude(preference = 0).order_by('id').order_by('student__sort_name')
+        apps = models.Application.objects.all().filter(course_id = courseID, 
+            student__is_disqualified = False, preference__in = [1,2,3]).order_by('student__sort_name','id')
         j = 0
         for i in apps:
             obj = models.Application.objects.get(id = i.id)
@@ -556,11 +684,10 @@ def instructor_ranking(request, hash):
                 'instructor_preference')[j]
             obj.save()
             j += 1
-
-    apps = models.Application.objects.all().filter(course_id = courseID
-        ).exclude(preference = 0).order_by('id').order_by('student__sort_name')
+    apps = models.Application.objects.all().filter(course_id = courseID, 
+            student__is_disqualified = False, preference__in = [1,2,3]).order_by('student__sort_name','id')
     students = models.Student.objects.all().filter(application__course_id = 
-        courseID, application__preference__in = [1,2,3]).order_by('application__id').order_by('sort_name')
+        courseID, application__preference__in = [1,2,3], is_disqualified = False).order_by('sort_name','application__id')
     num_apps = apps.count()
     num_students = students.count()
 
@@ -593,11 +720,6 @@ def instructor_ranking(request, hash):
     }
 
     return render(request, 'taform/instructor_ranking.html', context)
-
-
-def preference_submitted(request):
-    return render(request, 'taform/preference_submitted.html')
-
 
 def assign_tas(request):
     if not request.user.is_authenticated:
@@ -691,10 +813,11 @@ def export(request):
         if 'rankings_info' in request.POST:
             df_course = pd.DataFrame(list(models.Course.objects.all().values()))
             df_apps = pd.DataFrame(list(models.Application.objects.all().values()))
-            if df_course.empty or df_apps.empty:
+            df_elg_students = pd.DataFrame(list(models.Student.objects.all().filter(is_disqualified = False).values()))
+            if df_course.empty or df_apps.empty or df_elg_students.empty:
                 context = {'AC' : AC,
                           'no_results_error': 'The ranking results could not be exported. Please ensure:',
-                          'no_results_error_1': '1. Students have applied to courses',
+                          'no_results_error_1': '1. Eligible students have applied to courses',
                           'no_results_error_2': '2. Instructors have ranked students for their courses.',
                           'no_results_error_3': '3. The number of teaching assistants per course has been assigned.'}
                 return render(request, 'taform/export.html', context)
@@ -707,12 +830,12 @@ def export_course_info():
     df.drop(['id'], axis = 1, inplace = True)
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename=1_course-info.csv'
-    df.to_csv(path_or_buf=response,header=True, index=False)
+    df.to_csv(path_or_buf=response,header=True, index=False, encoding='utf-8')
     return response
 
 def format_course_info():
     df = pd.DataFrame(list(models.Course.objects.all().values()))
-    df['course_unit'] = df['course_subject'] + " " + df['course_id'] + " " + df['section'] + " " + df['course_name']
+    df['course_unit'] = df['course_subject'] + " " + df['course_id'] + " " + df['section'] + " " + df['course_name'] + " " + df['instructor_name']
     df.drop(['course_subject', 'course_id', 'section', 'course_name', 'term', 'url_hash'], axis = 1, inplace = True)
     df = df[['id', 'course_unit', 'instructor_name', 'instructor_email', 'full_ta', 'three_quarter_ta', 'half_ta', 'quarter_ta']]
     return df
@@ -724,13 +847,13 @@ def export_ranking_info():
     df.drop(['c_id', 's_id'], axis = 1, inplace = True)
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename=2_ranking-info.csv'
-    df.to_csv(path_or_buf=response,header=True, index=False)
+    df.to_csv(path_or_buf=response,header=True, index=False, encoding='utf-8')
     return response
 
 def format_rankings_info():
     df_courses = pd.DataFrame(list(models.Course.objects.all().values()))
     df_courses['course_num'] = df_courses['course_id']
-    df_courses['course_unit'] = df_courses['course_subject'] + " " + df_courses['course_num'] + " " + df_courses['section'] + " " + df_courses['course_name']
+    df_courses['course_unit'] = df_courses['course_subject'] + " " + df_courses['course_num'] + " " + df_courses['section'] + " " + df_courses['course_name'] + " " + df_courses['instructor_name']
     df_courses['c_id'] = df_courses['id']
     df_courses.drop(['course_id', 'id', 'term', 'url_hash', 'full_ta', 'half_ta', 'quarter_ta', 
         'three_quarter_ta', 'instructor_name', 'instructor_email'], axis = 1, inplace = True)
@@ -749,6 +872,7 @@ def format_rankings_info():
     # join courses & applications & students
     df = df_apps.merge(df_courses, left_on='course_id', right_on='c_id', how='left')
     df = df.merge(df_students, left_on='student_id', right_on='s_id', how='left')
+    df.loc[df.is_disqualified == True, ['instructor_preference']] = 0
     df = df.sort_values(by=['course_subject', 'course_num', 'section', 's_id'])
     # format the columns for export
     df.drop(['course_subject', 'course_id', 'section', 'course_name', 'student_id', 
@@ -764,7 +888,7 @@ def course_csv():
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename=course_template.csv'
     df = df.sort_values(by=['course_subject', 'course_id', 'section'])
-    df.to_csv(path_or_buf=response, header=True, index=False, quoting=csv.QUOTE_NONNUMERIC)
+    df.to_csv(path_or_buf=response, header=True, index=False, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8')
     return response
 
 def determine_status(df):

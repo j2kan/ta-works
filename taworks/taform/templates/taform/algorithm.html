@@ -1,10 +1,16 @@
 {% extends "taform/base.html" %}
 {% block content %}
 {% load static %}
+<script type="text/javascript" src="{% static 'taform/js/app.js' %}"></script>
+<script type="text/javascript" src="{% static 'taform/js/jquery.js' %}"></script>
+<script type="text/javascript" src="{% static 'taform/js/jquery-ui.js' %}"></script>
+<script type="text/javascript" src="{% static 'taform/js/app-jquery.js' %}"></script>
+
 <link rel="stylesheet" type="text/css" href="{% static 'taform/css/style.css' %}" />
+<link rel="stylesheet" type="text/css" href="{% static 'taform/css/jquery-ui.css' %}" />
 
 <h1>Teaching Assistant Assignment</h1>
-<p>Run the follow to output the graduate student to course assignments.</p> 
+<p>Run the following to output the graduate student to course assignments.</p> 
 <p><b>Please note:</b> for the most accurate results ensure the number of TA's per course are correct and that all Instructors have submitted their rankings.</p>
 <p class="failureMessage">{{no_apps_error}}</p>
 <p class="failureMessage">{{no_results_error}}</p>
@@ -14,7 +20,7 @@
 
 <table class="tg">
     <tr>
-        <td><b>Last successful algorithm run:</b></td>
+        <td><b>Last algorithm run:</b></td>
         {% if display_date %}
         <td>{{display_date}}&emsp;</td>
         {% else %}
@@ -31,29 +37,63 @@
         <td>
         <form action="{% url 'algorithm' %}" method="post">
         {% csrf_token %}
-            <input type="submit" name="algo_run" value="Go!"/>
+        <div id="dialog-confirm" title="Confirm Action">
+        <p><span class="submitButton2PopupText"></span>Running the algorithm may take up to 1 minute. Are you sure?</p>
+        </div>
+            <input class="submitButton2Popup" type="submit" name="algo_run" value="Solve model"/>
         </form>
         </td>
     </tr>
     <tr>
-        <td>2. Export algorithm results.&emsp;</td>
+        <td>2. Export students without a position.&emsp;</td>
         <td>
         <form action="{% url 'algorithm' %}" method="post">
         {% csrf_token %}
-            <input type="submit" name="algo_export" value="Export"/>
+            <input class="submitButton2" type="submit" name="student_export" value="Export students without a match"/>
+        </form>
+        </td>
+    </tr>
+    <tr>
+        <td>3. Export courses that still need teaching assistants.&emsp;</td>
+        <td>
+        <form action="{% url 'algorithm' %}" method="post">
+        {% csrf_token %}
+            <input class="submitButton2" type="submit" name="course_export" value="Export courses without a match"/>
+        </form>
+        </td>
+    </tr>
+    <tr>
+        <td>4. Export matching results.&emsp;</td>
+        <td>
+        <form action="{% url 'algorithm' %}" method="post">
+        {% csrf_token %}
+            <input class="submitButton2" type="submit" name="algo_export" value="Export last algorithm run"/>
         </form>
         </td>
     </tr>
 </table>
 
 <br>
+{% if students_supply|length > 133 %}
+<h2>Students who applied for TA, but not awarded any TA (disqualified students are not listed here)</h2>
+{% elif matches|length > 133 %}
+<h2 class="successMessage">All students have a match.</h2>
+{% endif %}
+{{students_supply|safe}}
+
 {% if courses_supply|length > 133 %}
-<h2>Remaining positions avaliable by course</h2>
+<h2>Courses that still need teaching assistants</h2>
+{% elif matches|length > 133 %}
+<h2 class="successMessage">All courses have a match.</h2>
 {% endif %}
 {{courses_supply|safe}}
+
 {% if matches|length > 133 %}
-<p>A course with four half ta positions would be represented with four rows. With more than 1 TA assigned to the course, you should decide who gets which position based on student preference and matching score (lower the better).</p>
 <h2>Course units with a teaching assistant assignment</h2>
+<p>The post assignment does not take student preference into consideration.</p>
+<p>Note: Lower the score, better the quality of the match.</p>
 {% endif %}
 {{matches|safe}}
+
 {% endblock %}
+
