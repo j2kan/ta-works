@@ -226,7 +226,7 @@ def apply(request):
                     app.save()
                     course_number += 1
             else:
-                form_valid = True
+                form_valid = False
                 context = {
                     's_form' : s_form,
                     'courses' : models.Course.objects.all(),
