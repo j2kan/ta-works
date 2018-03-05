@@ -9,7 +9,12 @@
 <h1>Management Sciences TA Application Form</h1>
 
 <body>
-    <p>Thank you - Your application has been received.</p>
+    <p>Thank you - Your application has been received. You have applied to the following courses using the student id: {{student_id}}. If you need an application removed, please contact the Associate Chair.</p>
+	
+    {% for i in applied %}
+	<li>{{i.course_subject}} {{i.course_id}} Sec {{i.section}} - {{i.course_name}} - {{i.instructor_name}}</li>
+	{% endfor %}
+
     <p>You are not able to return to your application, please close this tab.</p>
 </body>
 
