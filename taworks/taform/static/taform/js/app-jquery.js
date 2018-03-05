@@ -96,9 +96,7 @@ $(document).ready(function() {
     });
   }
 
-  $(".Submit_Apps").click(function() {
-    var form_valid = $(this).children("input[name='form_valid']");
-    $('#dialog').dialog({
+  $('#dialog').dialog({
       autoOpen: false,
       modal: true,
       closeOnEscape: false,
@@ -112,6 +110,10 @@ $(document).ready(function() {
             $(this).dialog('close');
       }
     }});
+
+  $(".Submit_Apps").click(function() {
+    var form_valid = $(this).children("input[name='form_valid']");
+    
     if (form_valid){
       $('input[name="confirm"]').on('click', function(e){
         e.preventDefault();

@@ -128,7 +128,7 @@ p, ul, ol, body, div p, div ul {
 .green_txt {
     color: green; 
 }
-#container {
+.container {
     display: table;
     }
 .row  {
@@ -140,21 +140,21 @@ p, ul, ol, body, div p, div ul {
 .row:nth-child(odd) {
     background: #e0e0e0;
 }
-#left, #right, #middle {
+.left, #right, #middle {
     font-family: 'Roboto';
     font-weight: 400;
     font-style: normal;
     display: table-cell;
     vertical-align: top;
     }
- #divWordWrap {
+ .divWordWrap {
     word-wrap: break-word;
     width:650px;
     font-family: 'Roboto';
     font-weight: 400;
     font-style: normal;
     }
- #divWordWrap2 {
+ .divWordWrap2 {
     word-wrap: break-word;
     width:650;
     }
@@ -189,7 +189,7 @@ table.table2 td{
     font-family: 'Roboto';
     font-size:14px;
     }
-#font{
+.font{
     color: #FE0909;
     font-family: 'Roboto';
     font-weight: 400;
