@@ -215,7 +215,6 @@ def apply(request):
             studentID_length=str(request.POST['student_id'])
             apps_made= models.Application.objects.filter(student__student_id=studentID, preference__in = [1,2,3]).count()
             app_id = 0
-            print apps_made
             if apps_made > 0:
                 previous_submissions = True
             else:
@@ -244,7 +243,6 @@ def apply(request):
                     }
                 return render(request, 'taform/application.html', context)
             context = None
-            print app_id
             courses_applied= models.Course.objects.filter(application__student_id=app_id, application__preference__in = [1,2,3]).distinct()
             if courses_applied.count()>0:
                 made_apps = True
