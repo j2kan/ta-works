@@ -6,10 +6,12 @@
 <h1>Change Application Form</h1>
 
 <div class="successMessage">{{success}}</div>
-<div id="font">{{error}}</div>
+
+<div class="font">{{error}}</div>
 <p>Please ensure the files you upload are text files (only .txt files will be uploaded). These files should contain HTML syntax. </p>
 
 <p> Please note any uploads will replace current text file.</p>
+
 <form action="{% url 'upload_front_matter' %}" method="post" enctype="multipart/form-data">
 {% csrf_token %}
 <br>

@@ -201,18 +201,20 @@ def apply(request):
         s_form = models.StudentForm(request.POST, request.FILES or None)
         a_forms = [models.ApplicationForm(request.POST, prefix=str(x), 
             instance=models.Application()) for x in range(len(num))]
-        context = {
-                's_form' : s_form,
-                'courses' : models.Course.objects.all(),
-                'app_form' : a_forms,
-                'error' : "Error: The student ID must be 8 characters.",
-                'AC' : AC,
-                'app_status' : app_status,
-                'status_date': status_date
-                }
         try:
             studentID=str(request.POST['student_id'])
-            if len(studentID) > 8:
+            if len(studentID) != 8:
+                form_valid = False
+                context = {
+                    's_form' : s_form,
+                    'courses' : models.Course.objects.all(),
+                    'app_form' : a_forms,
+                    'error' : "Error: The student ID must be 8 characters.",
+                    'AC' : AC,
+                    'app_status' : app_status,
+                    'status_date': status_date,
+                    'form_valid' : form_valid
+                }
                 return render(request, 'taform/application.html', context)            
             if s_form.is_valid() and all([app.is_valid() for app in a_forms]):
                 s = s_form.save(commit=True)
@@ -224,6 +226,7 @@ def apply(request):
                     app.save()
                     course_number += 1
             else:
+                form_valid = False
                 context = {
                     's_form' : s_form,
                     'courses' : models.Course.objects.all(),
@@ -231,7 +234,8 @@ def apply(request):
                     'front_matter' : front_matter,
                     'AC' : AC,
                     'app_status' : app_status,
-                    'status_date': status_date
+                    'status_date': status_date,
+                    'form_valid' : form_valid
                     }
                 return render(request, 'taform/application.html', context)
             context = None

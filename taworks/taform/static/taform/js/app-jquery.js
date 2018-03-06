@@ -119,23 +119,29 @@ $(document).ready(function() {
     });
   }
 
-  $('input[name="confirm"]').on('click', function(e){
-      e.preventDefault();
-      $('#dialog').dialog('open');
-  });
-
   $('#dialog').dialog({
       autoOpen: false,
       modal: true,
       closeOnEscape: false,
       buttons: {
-          "Confirm": function(e) {
-              $(this).dialog('close');
-              $('#myform').submit();
+        "Confirm": function(e) {
+            $(this).dialog('close');
+            $('#myform').append('<input name="confirm" type="hidden" class="submitButton" id ="btn" value="Submit" disabled>');
+            $('#myform').submit();
           },
-          "Cancel": function() {
-              $(this).dialog('close');
-          }
+        "Cancel": function() {
+            $(this).dialog('close');
       }
+    }});
+
+  $(".Submit_Apps").click(function() {
+    var form_valid = $(this).children("input[name='form_valid']");
+    
+    if (form_valid){
+      $('input[name="confirm"]').on('click', function(e){
+        e.preventDefault();
+        $('#dialog').dialog('open');
+      });
+    }
   });
 });
