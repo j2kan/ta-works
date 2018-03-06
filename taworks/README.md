@@ -34,6 +34,10 @@ _after running the queries below, you will need to press `q` to get out of it_
 ### Running Static files
 1. Enter `python manage.py collectstatic`
 
+### Running Python in Terminal
+1. Enter `python manage.py shell`
+2. Once the python shell has opened, enter `from taform import *`
+
 ### End to end testing on new builds
 1. [Go on prod and login](https://team4.uwaterloo.ca/login/)
    * try user:fake pw:fakepw -> it should fail
@@ -54,10 +58,10 @@ _after running the queries below, you will need to press `q` to get out of it_
     * verify CSV template can be downloaded and download it
     * upload a subset of this downloaded template
     * verify home button takes you back to AC view
-6. [Go on upload front matter page](https://team4.uwaterloo.ca/taform/upload_front_matter.html)
-    * verify you can download existing front matter text file
-    * make edits to this file and upload
-    * go back to application page and check your edits are uploaded
+6. [Go on Change Application Form](https://team4.uwaterloo.ca/taform/upload_front_matter.html)
+    * verify you can download existing front matter text file and intro page text file
+    * make edits to both files and upload
+    * go back to intro page and application page and check your edits are uploaded
 7. [Go on application page](https://team4.uwaterloo.ca/taform/application.html)
     * verify subset of courses you uploaded match
     * verify style sheets are applied on this page
@@ -84,6 +88,8 @@ _after running the queries below, you will need to press `q` to get out of it_
     * verify emails in your mailbox look like they're suppose to
     * verify that each course has a 'number of applicants' field 
     * verify that each course has a 'Ranking status field'
+    * verify that each course has a ranking status 'Link'
+    * verify that any course from the DB that does not have applicants still shows in the table
     * take a sample course from the table and search the DB to confirm number of applicants (application table)
     * take a sample course from the table and search the DB to confirm the ranking status (application table - instructor preference)
     * apply to a course and confirm the number of applicants inscreases
