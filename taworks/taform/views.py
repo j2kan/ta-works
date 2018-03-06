@@ -243,7 +243,7 @@ def apply(request):
                     }
                 return render(request, 'taform/application.html', context)
             context = None
-            courses_applied= models.Course.objects.filter(application__student_id=app_id, application__preference__in = [1,2,3]).distinct()
+            courses_applied= models.Course.objects.filter(application__student_id=app_id, application__preference__in = [1,2,3])
             if courses_applied.count()>0:
                 made_apps = True
             else:
